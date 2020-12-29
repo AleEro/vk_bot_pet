@@ -1,5 +1,6 @@
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
+
 import random
 import datetime
 import os
@@ -11,13 +12,11 @@ import os
 # import json
 
 
-def send_msg_to_user(reply_from_id, user_from_id, msg):
+def send_msg_to_user(msg):
     try:
         session_api.messages.send(peer_id='608258212',
                                   random_id=random.randint(1, 10 ** 5),
-                                  message=f'chat:{reply_from_id}\n\
-                                              user: @id{user_from_id} ({user_from_id})\n\
-                                              text: {msg}',
+                                  message=f'text: {msg}',
                                   group_id='68239915')
 
     except Exception as exp:
@@ -25,7 +24,22 @@ def send_msg_to_user(reply_from_id, user_from_id, msg):
 
 
 def get_settings_for_chat():
-    pass
+    global session_api
+    # start_message_id='0',
+    #     group_id='68239915',
+
+    return session_api.messages.getHistory(
+        offset='0',
+        user_id='227027256',
+        peer_id='2000000151',
+        rev='0',
+        count='200'
+    )
+
+
+# def set_settings_for_chat():
+#     print(session_api.messages)
+#     pass
 
 
 def wLog(*data):
@@ -53,37 +67,21 @@ def send_msg(reply_to_id, msg):
         print(wLog(type(exp)))
 
 
-token = "12cb2fe1cd67f00bf8fee625fe583de280a908467efdd9ef7108f4c1f2a1b9282784467c77e336e96b431"
-group_id = '68239915'
-
-today = datetime.datetime.today()
-name = f'{os.path.dirname(__file__)}{os.sep}vk_bot_log'
-print('editing log at: ' + name)
-
-vk_session = vk_api.VkApi(token=token)
-longpoll = VkBotLongPoll(vk_session, group_id)
-session_api = vk_session.get_api()
-
-
 def main():
+    global rules
     for event in longpoll.listen():
-        # print(wLog(event.type))
-        if event.type == VkBotEventType.MESSAGE_NEW:
+        if event.type != VkBotEventType.MESSAGE_REPLY:
             wLog(event.type)
             wLog(event.obj)
+            send_msg_to_user(msg=f"{event.obj}")
+
+        if event.type == VkBotEventType.MESSAGE_NEW:
             message = event.obj.message
 
             print(f"user: {message['peer_id']}\n",
                   f"text: {message['text']}")
 
-            send_msg_to_user(reply_from_id=message['peer_id'],
-                             user_from_id=message['from_id'],
-                             msg=f"{message['text']}")
-
-            if '200000000' in str(message['peer_id']) and '[club68239915|' in message['text']:
-                send_msg(reply_to_id=message['peer_id'],
-                         msg="Вы [club68239915|меня] звали, Мой сладкий пирожочек?")
-
+            if '200000000' in str(message['peer_id']):
                 if 'начать' in message['text'].lower():
                     send_msg(reply_to_id=message['peer_id'],
                              msg=(f"вот что я умею:\n"
@@ -101,33 +99,34 @@ def main():
                                   "писать в личку конечно мне можно но это только в том случае, "
                                   "если ты любишь играть волейбол со стеной. возможно ты знаешь в этом толк"))
 
-                elif '/d' in message['text'].lower():
-                    # todo: any num
+                elif '/d ' in message['text'].lower():
                     try:
-                        max_val = int(message['text'].split('|')[1].split(' ')[2])
+                        max_val = int(message['text'].split(' ')[1])
                     except Exception:
                         max_val = 100
 
                     send_msg(reply_to_id=message['peer_id'],
                              msg=f"Случайное число от 1 до {max_val}\n{random.randint(0, max_val)}")
 
-                elif '/bb' in message['text'].lower():
-                    # todo: bait someone
-                    for i in range(10):
-                        send_msg(reply_to_id=message['text'].split(' ')[2].split('|')[0][3:],
-                                 msg="Вы [club68239915|меня] звали, Мой сладкий пирожочек?")
+                elif '/bb ' in message['text'].lower():
+                    for i in range(5):
+                        send_msg(reply_to_id=message['peer_id'],
+                                 msg=f"[id{message['text'].split(' ')[1].split('|')[0][3:]}|Вас] звали!")
 
-
-                elif '/nr' in message['text'].lower():
+                elif '/nr ' in message['text'].lower():
+                    # todo: send your roles
                     pass
 
                 elif '/whoami' in message['text'].lower():
                     # todo: send your roles
                     pass
 
-                elif 'r' in message['text'].lower():
+                elif '/r ' in message['text'].lower():
                     # todo: send all roles
-                    pass
+                    print('working..')
+                    for i in get_settings_for_chat():
+
+                        print(get_settings_for_chat()[i])
 
             elif '200000000' not in str(message['peer_id']):
                 send_msg(reply_to_id=message['peer_id'],
@@ -135,6 +134,20 @@ def main():
 
                 print(f"user: {message['peer_id']}\n",
                       f"text: {message['text']}")
+
+
+token = "12cb2fe1cd67f00bf8fee625fe583de280a908467efdd9ef7108f4c1f2a1b9282784467c77e336e96b431"
+group_id = '68239915'
+
+today = datetime.datetime.today()
+name = f'{os.path.dirname(__file__)}{os.sep}vk_bot_log'
+print('editing log at: ' + name)
+
+vk_session = vk_api.VkApi(token=token)
+longpoll = VkBotLongPoll(vk_session, group_id)
+session_api = vk_session.get_api()
+
+rules = {}
 
 
 if __name__ == '__main__':
