@@ -2,51 +2,37 @@ import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 import random
-import datetime
 import os
 
+import json
+import datetime
 
-# на будущее
+# на будущее возможно никогда на наступившее
 # from vk_api.longpoll import VkEventType
 # import requests
-# import json
 
 
-def send_msg_to_user(msg):
-    try:
-        session_api.messages.send(peer_id='608258212',
-                                  random_id=random.randint(1, 10 ** 5),
-                                  message=f'text: {msg}',
-                                  group_id='68239915')
-
-    except Exception as exp:
-        print(wLog(type(exp)))
+# configuration operations
+def load_config():
+    with open('config.json') as file:
+        file_data = json.load(file)
+    return file_data
 
 
-def get_settings_for_chat():
-    global session_api
-    # start_message_id='0',
-    #     group_id='68239915',
-
-    return session_api.messages.getHistory(
-        offset='0',
-        user_id='227027256',
-        peer_id='2000000151',
-        rev='0',
-        count='200'
-    )
+def save_config(data):
+    with open('config.json') as file:
+        json.dump(data, file)
 
 
-# def set_settings_for_chat():
-#     print(session_api.messages)
-#     pass
-
-
-def wLog(*data):
-    global name
-    with open(name, 'a+', encoding='utf_8') as f:
+# writing event log
+def wLog(*data, log_path):
+    with open(log_path, 'a+', encoding='utf_8') as f:
         f.write('{} - {}\n'.format(str(datetime.datetime.now()), str(data)))
     return data
+
+
+def send_admin_msg(msg):
+    send_msg(load_config()["admin_id"], msg)
 
 
 def send_msg(reply_to_id, msg):
@@ -62,31 +48,32 @@ def send_msg(reply_to_id, msg):
             peer_id=reply_to_id,
             random_id=random.randint(1, 10 ** 5),
             message=msg,
-            group_id='68239915')
-    except Exception as exp:
-        print(wLog(type(exp)))
+            group_id=load_config()["group_id"])
+    except Exception as excp:
+        print(wLog(type(excp), log_path=log_path))
 
 
-def main():
-    global rules
+def main(config_data):
     for event in longpoll.listen():
         if event.type != VkBotEventType.MESSAGE_REPLY:
-            wLog(event.type)
-            wLog(event.obj)
-            send_msg_to_user(msg=f"{event.obj}")
+            # wLog(event.type, name=log_path)
+            wLog(event.obj, log_path=log_path)
+            send_admin_msg(msg=f"{event.obj}")
+            # print(event)
 
         if event.type == VkBotEventType.MESSAGE_NEW:
             message = event.obj.message
 
             print(f"user: {message['peer_id']}\n",
                   f"text: {message['text']}")
+            print(int(config_data['default_group_id']))
 
-            if '200000000' in str(message['peer_id']):
+            if int(message['peer_id']) >= int(config_data['default_group_id']):
                 if 'начать' in message['text'].lower():
                     send_msg(reply_to_id=message['peer_id'],
-                             msg=(f"вот что я умею:\n"
+                             msg=(f"вот то, что я умею:\n"
                                   "'начать' - я пишу начальную помощь\n"
-                                  "'/d' - я пишу число от 0 до твоего числа\n"
+                                  "'кубик' - я пишу число от 0 до твоего числа\n"
                                   "'/nr' - установлю твою роль в чате"
                                   " это сможет делать только создатель чата(пока не работает)\n"
                                   "'/whoami' - напомню тебе твою роль в чате(пока не работает)\n"
@@ -99,7 +86,7 @@ def main():
                                   "писать в личку конечно мне можно но это только в том случае, "
                                   "если ты любишь играть волейбол со стеной. возможно ты знаешь в этом толк"))
 
-                elif '/d ' in message['text'].lower():
+                elif 'кубик' in message['text'].lower():
                     try:
                         max_val = int(message['text'].split(' ')[1])
                     except Exception:
@@ -114,21 +101,28 @@ def main():
                                  msg=f"[id{message['text'].split(' ')[1].split('|')[0][3:]}|Вас] звали!")
 
                 elif '/nr ' in message['text'].lower():
-                    # todo: send your roles
+                    """todo:change your roles"""
+                    print('nr')
                     pass
 
                 elif '/whoami' in message['text'].lower():
-                    # todo: send your roles
+                    """todo: send your roles"""
+                    print('nr')
                     pass
 
                 elif '/r ' in message['text'].lower():
-                    # todo: send all roles
                     print('working..')
-                    for i in get_settings_for_chat():
+                    pass
+                    # todo: send all roles
+                    # user_id = '1'
+                    # user_role = '1'
+                    # set_settings[message['peer_id']]['users'][user_id] = user_role
 
-                        print(get_settings_for_chat()[i])
+                    # for i in settg:
+                    #     print(settg[i])
 
-            elif '200000000' not in str(message['peer_id']):
+            elif int(message['peer_id']) < config_data['default_group_id']:
+                # just repeeating the income message
                 send_msg(reply_to_id=message['peer_id'],
                          msg=f"давай поиграем в попугая :D\n{message['text']}")
 
@@ -136,19 +130,19 @@ def main():
                       f"text: {message['text']}")
 
 
-token = "12cb2fe1cd67f00bf8fee625fe583de280a908467efdd9ef7108f4c1f2a1b9282784467c77e336e96b431"
-group_id = '68239915'
-
+# loging preinstalls
 today = datetime.datetime.today()
-name = f'{os.path.dirname(__file__)}{os.sep}vk_bot_log'
-print('editing log at: ' + name)
+log_path = f'{os.path.dirname(__file__)}{os.sep}logs{os.sep}{str(datetime.datetime.today()).split(" ")[0]}_vk_bot_log'
+print('editing log at: ' + log_path)
 
-vk_session = vk_api.VkApi(token=token)
-longpoll = VkBotLongPoll(vk_session, group_id)
+# config preinstalls
+config = load_config()
+
+# bot preinstalls
+vk_session = vk_api.VkApi(token=config["token"])
+longpoll = VkBotLongPoll(vk_session, config["group_id"])
 session_api = vk_session.get_api()
-
-rules = {}
-
+send_admin_msg('i woke up')
 
 if __name__ == '__main__':
-    main()
+    main(config)
