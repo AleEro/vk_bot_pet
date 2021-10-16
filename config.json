@@ -1,6 +1,6 @@
-{
-  "admin_id": 608258212,
+{"admin_id": 608258212,
   "token": "12cb2fe1cd67f00bf8fee625fe583de280a908467efdd9ef7108f4c1f2a1b9282784467c77e336e96b431",
   "group_id": "68239915",
-  "default_group_id": 200000000
-}
+  "default_group_id": 200000000,
+  "log_path": "D:\\PycharmProjects\\vk_bot_pet\\logs\\2021-10-16_vk_bot_log",
+  "today": "2021-10-16"}

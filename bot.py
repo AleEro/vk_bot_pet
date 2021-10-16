@@ -19,14 +19,14 @@ def load_config():
     return file_data
 
 
-def save_config(data):
+def save_config():
     global config
-    with open('config.json') as file:
-        json.dump(data, file)
+    with open('config.json', 'w+', encoding='utf_8') as file:
+        json.dump(config, file)
 
 
 # writing event log
-def wLog(*data):
+def w_log(*data):
     global config
     with open(config['log_path'], 'a+', encoding='utf_8') as f:
         f.write('{} - {}\n'.format(str(datetime.datetime.now()), str(data)))
@@ -54,34 +54,32 @@ def send_msg(reply_to_id, msg):
             message=msg,
             group_id=config["group_id"])
     except Exception as excp:
-        print(wLog(type(excp)))
+        print(w_log(type(excp)))
 
 
-def main(config_data):
+def main():
+    global config
+
     for event in longpoll.listen():
         if event.type != VkBotEventType.MESSAGE_REPLY:
-            # wLog(event.type, name=log_path)
-            wLog(event.obj)
+            w_log(event.obj)
             send_admin_msg(msg=f"{event.obj}")
             # print(event)
 
         if event.type == VkBotEventType.MESSAGE_NEW:
             message = event.obj.message
 
-            print(f"user: {message['peer_id']}\n",
-                  f"text: {message['text']}")
-            print(int(config_data['default_group_id']))
-
-            if int(message['peer_id']) >= int(config_data['default_group_id']):
-                if 'начать' in message['text'].lower():
+            # for messages in group chats
+            if int(message['peer_id']) >= int(config['default_group_id']):
+                if '/h' in message['text'].lower():
                     send_msg(reply_to_id=message['peer_id'],
                              msg=(f"вот то, что я умею:\n"
-                                  "'начать' - я пишу начальную помощь\n"
-                                  "'кубик' - я пишу число от 0 до твоего числа\n"
-                                  "'/nr' - установлю твою роль в чате"
+                                  "/h - я пишу начальную помощь\n"
+                                  "/d - я пишу число от 0 до твоего числа\n"
+                                  "/sr - установлю твою роль в чате"
                                   " это сможет делать только создатель чата(пока не работает)\n"
-                                  "'/whoami' - напомню тебе твою роль в чате(пока не работает)\n"
-                                  "'/r' - напомню все роли в чате(пока не работает)\n"
+                                  "/whoami - напомню тебе твою роль в чате(пока не работает)\n"
+                                  "/r - напомню все роли в чате(пока не работает)\n"
                                   "\n"
                                   "соглашаясь на мои скромные "
                                   "услуги вы понимаете, что я был создан само-криво-учкой.\n"
@@ -90,14 +88,19 @@ def main(config_data):
                                   "писать в личку конечно мне можно но это только в том случае, "
                                   "если ты любишь играть волейбол со стеной. возможно ты знаешь в этом толк"))
 
-                elif 'кубик' in message['text'].lower():
+                elif message['text'].split(' ')[0].lower() in ('кубик', '/d'):
+                    # /d num
+                    # кубик num
+                    # кубик
+                    # /d
+
                     try:
                         max_val = int(message['text'].split(' ')[1])
                     except Exception:
                         max_val = 100
 
                     send_msg(reply_to_id=message['peer_id'],
-                             msg=f"Случайное число от 1 до {max_val}\n{random.randint(0, max_val)}")
+                             msg=f"Случайное число от 1 до {max_val}\n{random.randint(1, max_val)}")
 
                 elif '/bb ' in message['text'].lower():
                     for i in range(5):
@@ -125,7 +128,8 @@ def main(config_data):
                     # for i in settg:
                     #     print(settg[i])
 
-            elif int(message['peer_id']) < config_data['default_group_id']:
+            # for messages in personal chats
+            elif int(message['peer_id']) < config['default_group_id']:
                 # just repeeating the income message
                 send_msg(reply_to_id=message['peer_id'],
                          msg=f"давай поиграем в попугая :D\n{message['text']}")
@@ -133,22 +137,23 @@ def main(config_data):
                 print(f"user: {message['peer_id']}\n",
                       f"text: {message['text']}")
 
-            save_config(config)
+            save_config()
 
-
-# loging preinstalls
-today = datetime.datetime.today()
-log_path = f'{os.path.dirname(__file__)}{os.sep}logs{os.sep}{str(datetime.datetime.today()).split(" ")[0]}_vk_bot_log'
-print('editing log at: ' + log_path)
 
 # config preinstalls
 config = load_config()
+today = datetime.datetime.today()
+log_path = f'{os.path.dirname(__file__)}{os.sep}logs{os.sep}{str(today).split(" ")[0]}_vk_bot_log'
+config['today'] = str(today).split(" ")[0]
+config['log_path'] = log_path
 
 # bot preinstalls
+print('editing log at: ' + config['log_path'])
 vk_session = vk_api.VkApi(token=config["token"])
 longpoll = VkBotLongPoll(vk_session, config["group_id"])
 session_api = vk_session.get_api()
 send_admin_msg('i woke up')
 
+
 if __name__ == '__main__':
-    main(config)
+    main()
