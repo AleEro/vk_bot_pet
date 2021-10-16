@@ -20,22 +20,26 @@ def load_config():
 
 
 def save_config(data):
+    global config
     with open('config.json') as file:
         json.dump(data, file)
 
 
 # writing event log
-def wLog(*data, log_path):
-    with open(log_path, 'a+', encoding='utf_8') as f:
+def wLog(*data):
+    global config
+    with open(config['log_path'], 'a+', encoding='utf_8') as f:
         f.write('{} - {}\n'.format(str(datetime.datetime.now()), str(data)))
     return data
 
 
 def send_admin_msg(msg):
-    send_msg(load_config()["admin_id"], msg)
+    global config
+    send_msg(config["admin_id"], msg)
 
 
 def send_msg(reply_to_id, msg):
+    global config
     """
         кто peer_id
             group_id='68239915'
@@ -48,16 +52,16 @@ def send_msg(reply_to_id, msg):
             peer_id=reply_to_id,
             random_id=random.randint(1, 10 ** 5),
             message=msg,
-            group_id=load_config()["group_id"])
+            group_id=config["group_id"])
     except Exception as excp:
-        print(wLog(type(excp), log_path=log_path))
+        print(wLog(type(excp)))
 
 
 def main(config_data):
     for event in longpoll.listen():
         if event.type != VkBotEventType.MESSAGE_REPLY:
             # wLog(event.type, name=log_path)
-            wLog(event.obj, log_path=log_path)
+            wLog(event.obj)
             send_admin_msg(msg=f"{event.obj}")
             # print(event)
 
@@ -128,6 +132,8 @@ def main(config_data):
 
                 print(f"user: {message['peer_id']}\n",
                       f"text: {message['text']}")
+
+            save_config(config)
 
 
 # loging preinstalls
