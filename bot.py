@@ -6,13 +6,15 @@ import os
 
 import json
 import datetime
+import mysql.connector as mysql
+
 
 # на будущее возможно никогда на наступившее
 # from vk_api.longpoll import VkEventType
 # import requests
 
 
-# configuration operations
+# +configuration operations
 def load_config():
     with open('config.json') as file:
         file_data = json.load(file)
@@ -25,7 +27,23 @@ def save_config():
         json.dump(config, file)
 
 
-# writing event log
+# configuration chats rules
+# def load_rules(chat_id):
+#     global config
+#     with open(f'chats_rules/{chat_id}.json') as file:
+#         file_data = json.load(file)
+#     return file_data
+#     pass
+#
+#
+# def save_rules(chat_id):
+#     global config
+#     with open(f'chats_rules/{chat_id}.json', 'w+', encoding='utf_8') as file:
+#         json.dump(config, file)
+#     pass
+
+
+# +writing events log
 def w_log(*data):
     global config
     with open(config['log_path'], 'a+', encoding='utf_8') as f:
@@ -57,6 +75,7 @@ def send_msg(reply_to_id, msg):
         print(w_log(type(excp)))
 
 
+# bot
 def main():
     global config
 
@@ -71,14 +90,15 @@ def main():
 
             # for messages in group chats
             if int(message['peer_id']) >= int(config['default_group_id']):
-                if '/h' in message['text'].lower():
+                mssg = message['text'].split(' ')
+                if mssg[0].lower() in '/h':
                     send_msg(reply_to_id=message['peer_id'],
                              msg=(f"вот то, что я умею:\n"
                                   "/h - я пишу начальную помощь\n"
                                   "/d - я пишу число от 0 до твоего числа\n"
                                   "/sr - установлю твою роль в чате"
                                   " это сможет делать только создатель чата(пока не работает)\n"
-                                  "/whoami - напомню тебе твою роль в чате(пока не работает)\n"
+                                  "/mr - напомню тебе твою роль в чате(пока не работает)\n"
                                   "/r - напомню все роли в чате(пока не работает)\n"
                                   "\n"
                                   "соглашаясь на мои скромные "
@@ -88,36 +108,36 @@ def main():
                                   "писать в личку конечно мне можно но это только в том случае, "
                                   "если ты любишь играть волейбол со стеной. возможно ты знаешь в этом толк"))
 
-                elif message['text'].split(' ')[0].lower() in ('кубик', '/d'):
+                elif mssg[0].lower() in ('кубик', '/d'):
                     # /d num
                     # кубик num
                     # кубик
                     # /d
 
                     try:
-                        max_val = int(message['text'].split(' ')[1])
+                        max_val = int(mssg[1])
                     except Exception:
                         max_val = 100
 
                     send_msg(reply_to_id=message['peer_id'],
                              msg=f"Случайное число от 1 до {max_val}\n{random.randint(1, max_val)}")
 
-                elif '/bb ' in message['text'].lower():
+                elif mssg[0].lower() in '/bb ':
                     for i in range(5):
                         send_msg(reply_to_id=message['peer_id'],
                                  msg=f"[id{message['text'].split(' ')[1].split('|')[0][3:]}|Вас] звали!")
 
-                elif '/nr ' in message['text'].lower():
+                elif mssg[0].lower() in '/sr ':
                     """todo:change your roles"""
                     print('nr')
                     pass
 
-                elif '/whoami' in message['text'].lower():
+                elif mssg[0].lower() in '/i':
                     """todo: send your roles"""
                     print('nr')
                     pass
 
-                elif '/r ' in message['text'].lower():
+                elif mssg[0].lower() in '/r ':
                     print('working..')
                     pass
                     # todo: send all roles
@@ -154,6 +174,12 @@ longpoll = VkBotLongPoll(vk_session, config["group_id"])
 session_api = vk_session.get_api()
 send_admin_msg('i woke up')
 
+# sql
+db = mysql.connect(
+    host="localhost",
+    user=config["db_login"],
+    passwd=config["db_key"]
+)
 
 if __name__ == '__main__':
     main()
